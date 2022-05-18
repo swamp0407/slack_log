@@ -9,4 +9,5 @@ cronで動かしてgoogle driveとmongo dbにデータを保存する。
 
 ### viewer
 フロントエンド部分
-https://github.com/tyage/slack-patron　をもとに作成したけど色々変更した。
+https://github.com/tyage/slack-patron 
+をもとに作成したけど色々変更した。
