@@ -1,0 +1,17 @@
+/.bundle
+/vendor/bundle
+config.yml
+config.js
+tmp
+logs
+pids
+__pycache__
+.vscode
+node_modules
+log
+public
+static
+.htaccess
+.env
+secret
+share.sh
