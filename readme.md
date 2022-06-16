@@ -11,3 +11,4 @@ cronで動かしてgoogle driveとmongo dbにデータを保存する。
 フロントエンド部分
 https://github.com/tyage/slack-patron 
 をもとに作成したけど色々変更した。
+(privateにしててenvとかconfigとか上げてたのをpublicにするために削除して1つのcommitとして追加した)
