@@ -1,8 +1,9 @@
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+
 import config
-from mongo import slack
 from logger import logger
+from mongo import slack
 
 client = WebClient(token=config.API_TOKEN)
 
@@ -11,13 +12,12 @@ client = WebClient(token=config.API_TOKEN)
 # botだった場合はbot_idをfieldに追加してbotsの一蘭に追加
 
 
-
 def get_members():
     return client.users_list()["members"]
 
 
-def get_channels():
-    return client.conversations_list()["channels"]
+def get_channels(cursor=None):
+    return client.conversations_list(cursor=cursor)["channels"]
 
 
 def get_channel_members(channelId):
@@ -116,12 +116,15 @@ def update_replies(replies, channelId):
         update_reply(reply, channelId)
 
 
-
-
 if __name__ == '__main__':
     logger.debug("message_logging start")
     update_members()
     channels = get_channels()
+    while channels["response_metadata"]["next_cursor"] != "":
+        update_channels(channels)
+        cursor = channels["response_metadata"]["next_cursor"]
+        channels = get_channels(cursor=cursor)
     update_channels(channels)
+
     print(config.API_TOKEN)
     logger.debug("message_logging end")
