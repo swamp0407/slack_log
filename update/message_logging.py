@@ -17,7 +17,8 @@ def get_members():
 
 
 def get_channels(cursor=None):
-    return client.conversations_list(cursor=cursor)["channels"]
+    res = client.conversations_list(cursor=cursor)
+    return res["channels"], res["metadata"]["next_cursor"]
 
 
 def get_channel_members(channelId):
@@ -119,11 +120,10 @@ def update_replies(replies, channelId):
 if __name__ == '__main__':
     logger.debug("message_logging start")
     update_members()
-    channels = get_channels()
-    while channels["response_metadata"]["next_cursor"] != "":
+    channels, cursor = get_channels()
+    while cursor != "":
         update_channels(channels)
-        cursor = channels["response_metadata"]["next_cursor"]
-        channels = get_channels(cursor=cursor)
+        channels, cursor = get_channels(cursor=cursor)
     update_channels(channels)
 
     print(config.API_TOKEN)
