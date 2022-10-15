@@ -18,7 +18,7 @@ def get_members():
 
 def get_channels(cursor=None):
     res = client.conversations_list(cursor=cursor)
-    return res["channels"], res["metadata"]["next_cursor"]
+    return res["channels"], res["response_metadata"]["next_cursor"]
 
 
 def get_channel_members(channelId):
