@@ -30,7 +30,13 @@ module.exports = {
         use: [
           { loader: MiniCssExtractPlugin.loader },
           // { loader: 'style-loader' },
-          { loader: "css-loader" },
+          { loader: "css-loader",
+          options: {
+            presets: [
+                  "@babel/preset-env",
+                  "@babel/preset-react"
+              ]
+          } },
         ],
       },
       {
