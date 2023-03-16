@@ -1,9 +1,8 @@
-from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
-
 import config
 from logger import logger
 from mongo import slack
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 client = WebClient(token=config.API_TOKEN)
 
@@ -15,6 +14,9 @@ client = WebClient(token=config.API_TOKEN)
 def get_members():
     return client.users_list()["members"]
 
+
+def get_emojis():
+    return client.emoji_list()["emoji"]
 
 def get_channels(cursor=None):
     res = client.conversations_list(cursor=cursor)
@@ -47,6 +49,12 @@ def update_members():
             member["bot_id"] = member['profile']['bot_id']
             slack.bots.find_one_and_replace(
                 {"id": member["id"]}, member, upsert=True)
+
+def update_emojis():
+    emojis = get_emojis()
+    for name,url in emojis.items():
+        update = slack.emojis.find_one_and_replace(
+            {"name": name}, {"name": name, "url": url}, upsert=True)
 
 
 # チャンネルを新たに取得して更新(アーカイブ済みのは取得されないと思うけど分からない)

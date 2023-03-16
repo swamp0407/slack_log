@@ -22,13 +22,11 @@ def delete_id(ret, objects, key):
         ret[object[key]] = object
     return ret
 
-
 def get_bots_from_mongo():
     bots = slack.bots.find()
     ret = {}
     ret = delete_id(ret, bots, "bot_id")
     return ret
-
 
 def get_users_from_mongo():
     users = slack.users.find()
@@ -36,6 +34,12 @@ def get_users_from_mongo():
     ret = delete_id(ret, users, "id")
     return ret
 
+def get_emojis_from_mongo():
+    emojis = slack.emojis.find()
+    ret = {}
+    for emoji in emojis:
+        ret[emoji["name"]] = emoji["url"]
+    return ret
 
 def get_channels_from_mongo():
     channels = slack.channels.find()
@@ -43,13 +47,14 @@ def get_channels_from_mongo():
     ret = delete_id(ret, channels, "id")
     return ret
 
-
 def messages(params):
     limit = params.get("limit", 100)
     ts_direction = 1 if params.get("min_ts") else -1
     condition = {
         "hidden": {'$ne': True}
     }
+    if params.get("thread_ts"):
+        condition["thread_ts"] = params["thread_ts"]
     if params.get("min_ts"):
         condition["ts"] = {'$gte': params["min_ts"]}
     if params.get("max_ts"):
@@ -92,12 +97,15 @@ def get_bots():
     bots = get_bots_from_mongo()
     return jsonify(bots)
 
-
 @ app.route('/users.json')
 def get_users():
     users = get_users_from_mongo()
     return jsonify(users)
 
+@ app.route('/emojis.json')
+def get_emojis():
+    emojis = get_emojis_from_mongo()
+    return jsonify(emojis)
 
 @ app.route('/channels.json')
 def get_channels():
@@ -155,6 +163,14 @@ def get_around_messages(channel):
     }
     return jsonify(ret)
 
+@ app.route('/thread_messages.json', methods=["POST"])
+def get_thread_messages():
+    thread_messages, has_more_past_message = messages({
+                    "thread_ts": request.form.get("thread_ts"),"limit": 10000})
+    ret = {
+        "messages": thread_messages,
+    }
+    return jsonify(ret)
 
 @ app.route('/search', methods=["POST"])
 def search():
@@ -198,6 +214,29 @@ def time():
     }
     return jsonify(ret)
 
+@ app.route('/all', methods=["POST"])
+def all_messages():
+    past_messages, has_more_past_message = messages({
+        "max_ts": request.form.get("ts"),
+        "limit": 50}
+    )
+    future_messages, has_more_future_message = messages({
+        "min_ts": request.form.get("ts"),
+        "limit": 50}
+    )
+    all_messages = (past_messages + future_messages)
+
+    def get_unique_list(seq):
+        seen = []
+        return [x for x in seq if x["ts"] not in seen and not seen.append(x["ts"])]
+
+    all_messages = get_unique_list(all_messages)
+    ret = {
+        "messages": all_messages,
+        "has_more_past_message": has_more_past_message,
+        "has_more_future_message": has_more_future_message
+    }
+    return jsonify(ret)
 
 @ app.route("/team.json")
 def get_team():
