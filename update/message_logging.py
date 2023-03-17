@@ -57,6 +57,25 @@ def update_emojis():
             {"name": name}, {"name": name, "url": url}, upsert=True)
 
 
+def denormalize_message(message):
+    reactoins_after = []
+    if message.get("reactions"):
+        reactions = message["reactions"]
+        for reaction in reactions:
+            if reaction.get("user"):
+                reactoins_after.append(
+                    [{"name":reaction["name"] ,
+                       "user":reaction["user"]}]
+                )
+            elif reaction.get("users"):
+                for user in reaction["users"]:
+                    reactoins_after.append(
+                        [{"name":reaction["name"],
+                           "user":user}]
+                    )
+        message["reactions"] = reactoins_after
+    return message
+
 # チャンネルを新たに取得して更新(アーカイブ済みのは取得されないと思うけど分からない)
 # 各チャンネルのメンバー一覧のfieldを追加
 # 各チャンネルのメッセージ一覧を(1000個まで)取得
@@ -75,12 +94,9 @@ def retain_files(newmessage, oldmessage, ts):
 def update_channel(channel):
     try:
         channelId = channel["id"]
-        update = slack.channels.find_one_and_replace(
-            {"id": channelId}, channel, upsert=True)
-
+        update = slack.channels.find_one_and_replace({"id": channelId}, channel, upsert=True)
         members = get_channel_members(channelId)
-        update = slack.channels.update_one(
-            {"id": channelId}, {"$set": {"members": members.data["members"]}})
+        update = slack.channels.update_one({"id": channelId}, {"$set": {"members": members.data["members"]}})
         messages = get_channel_messages(channelId, limit=1000)
         update_messages(messages, channelId)
     except SlackApiError as e:
@@ -91,39 +107,26 @@ def update_channels(channels):
     for channel in channels:
         update_channel(channel)
 
-
-def update_message(message, channelId):
+def insert_message(message, channelId):
     message["channel"] = channelId
     ts = message["ts"]
-    if message.get("files"):
-        oldmessage = slack.messages.find_one({"ts": ts})
-        message = retain_files(message, oldmessage, ts)
-    update = slack.messages.find_one_and_replace(
-        {"ts": ts}, message, upsert=True)
+    message = denormalize_message(message)
+    update = slack.messages.update_one(
+            {"id": ts}, {"$set": message})
+
+def update_message(message, channelId):
+    insert_message(message, channelId)
     if message.get("thread_ts") and message.get("reply_count"):
         replies = get_replies(channelId, message["thread_ts"])
-        update_replies(replies.data["messages"], channelId)
-
+        update_reply_messages(replies.data["messages"], channelId)
 
 def update_messages(messages, channelId):
     for message in messages:
         update_message(message, channelId)
 
-
-def update_reply(reply, channelId):
-    reply["channel"] = channelId
-    ts = reply["ts"]
-    if reply.get("files"):
-        oldreply = slack.messages.find_one({"ts": ts})
-        reply = retain_files(reply, oldreply, ts)
-    update = slack.messages.find_one_and_replace(
-        {"ts": ts}, reply, upsert=True)
-
-
-def update_replies(replies, channelId):
-    for reply in replies:
-        update_reply(reply, channelId)
-
+def update_reply_messages(reply_messages, channelId):
+    for reply_message in reply_messages:
+        insert_message(reply_message, channelId)
 
 if __name__ == '__main__':
     logger.debug("message_logging start")
